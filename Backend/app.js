@@ -3,11 +3,8 @@ const path = require('path');
 const connectDB = require('./db'); // Pastikan file db.js ada
 const hospitalRoutes = require('./routes/hospitals');
 const policeRoutes = require('./routes/police');
-const fireStationRoutes = require('./routes/firestation');
-const crashRoutes = require('./routes/Crash');
-const uploadRoutes = require('./routes/Upload'); // tambahkan ini di bagian atas
-
-
+const fireStationRoutes = require('./routes/fireStation');
+const crashRoutes = require('./routes/crash');
 require('dotenv').config();
 
 const app = express();
@@ -32,8 +29,6 @@ app.use("/api/v1/hospitals", hospitalRoutes);
 app.use("/api/v1/police", policeRoutes);
 app.use("/api/v1/damkar", fireStationRoutes);
 app.use("/api/crash", crashRoutes);
-app.use("/api/Upload", uploadRoutes);
-
 
 // Test endpoint
 app.get("/", (req, res) => {
@@ -54,6 +49,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Terjadi kesalahan server!' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
   console.log(`🟢 Server running on http://0.0.0.0:${PORT}`);
 });

@@ -3,6 +3,11 @@ const router = express.Router();
 const upload = require("../middleware/upload");
 const { detectNearbyFacilities, logCrashReport } = require("../services/alertService");
 
+// ✅ Tambahkan ping endpoint
+router.get("/ping", (req, res) => {
+  res.status(200).json({ message: "Server aktif" });
+});
+
 router.post("/upload", upload.fields([
   { name: "file1" },
   { name: "file2" },
@@ -10,13 +15,11 @@ router.post("/upload", upload.fields([
 ]), async (req, res) => {
   try {
     const { coordinates } = req.body;
-    if (!coordinates || !Array.isArray((coordinates))) {
+    if (!coordinates || !Array.isArray(coordinates)) {
       return res.status(400).json({ error: "Koordinat tidak valid" });
     }
-    // 🔍 Cari fasilitas terdekat
-    const facilities = await detectNearbyFacilities(coordinates);
 
-    // 🧾 Simpan laporan ke DB
+    const facilities = await detectNearbyFacilities(coordinates);
     await logCrashReport(coordinates, facilities);
 
     console.log("🚨 Kecelakaan diterima!");
@@ -32,9 +35,9 @@ router.post("/upload", upload.fields([
       }))
     });
 
-   } catch (err) {
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-module.exports=router;
+module.exports = router;
