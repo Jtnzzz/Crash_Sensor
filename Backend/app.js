@@ -32,7 +32,7 @@ app.use("/api/v1/hospitals", hospitalRoutes);
 app.use("/api/v1/police", policeRoutes);
 app.use("/api/v1/damkar", fireStationRoutes);
 app.use("/api/crash", crashRoutes);
-app.use("/api/upload", uploadRoutes);
+app.use("/api/Upload", uploadRoutes);
 
 
 // Test endpoint
