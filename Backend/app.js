@@ -3,7 +3,7 @@ const path = require('path');
 const connectDB = require('./db'); // Pastikan file db.js ada
 const hospitalRoutes = require('./routes/hospitals');
 const policeRoutes = require('./routes/police');
-const fireStationRoutes = require('./routes/fireStation');
+const fireStationRoutes = require('./routes/firestation');
 const crashRoutes = require('./routes/Crash');
 
 require('dotenv').config();
@@ -50,6 +50,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Terjadi kesalahan server!' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🟢 Server running on http://0.0.0.0:${PORT}`);
 });
