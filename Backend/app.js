@@ -4,7 +4,7 @@ const connectDB = require('./db'); // Pastikan file db.js ada
 const hospitalRoutes = require('./routes/hospitals');
 const policeRoutes = require('./routes/police');
 const fireStationRoutes = require('./routes/firestation');
-const crashRoutes = require('./routes/crash');
+const crashRoutes = require('./routes/Crash');
 require('dotenv').config();
 
 const app = express();
