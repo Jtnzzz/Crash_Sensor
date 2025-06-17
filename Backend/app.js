@@ -1,12 +1,13 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
+const fsSync = require('fs'); // untuk createReadStream
 const connectDB = require('./db');
 const hospitalRoutes = require('./routes/hospitals');
 const policeRoutes = require('./routes/police');
 const fireStationRoutes = require('./routes/firestation');
 const crashRoutes = require('./routes/Crash');
-const upload = require('./middleware/upload');
+const upload = require('./middleware/upload'); // Multer middleware
 require('dotenv').config();
 
 const app = express();
@@ -65,7 +66,7 @@ app.get('/api/videos', async (req, res) => {
 });
 
 // ======================
-// ENDPOINT: Stream Video (support 206 Partial Content)
+// ENDPOINT: Streaming Video (Range Support)
 // ======================
 app.get('/uploads/:filename', async (req, res) => {
   const filePath = path.join(__dirname, 'uploads', req.params.filename);
@@ -75,22 +76,31 @@ app.get('/uploads/:filename', async (req, res) => {
     const range = req.headers.range;
 
     if (!range) {
-      return res.status(416).send('Range header required');
+      // Fallback untuk klien yang tidak kirim Range
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes',
+      });
+      fsSync.createReadStream(filePath).pipe(res);
+      return;
     }
 
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunkSize = (end - start) + 1;
+    const chunkSize = end - start + 1;
 
-    const file = (await import('fs')).createReadStream(filePath, { start, end });
+    const stream = fsSync.createReadStream(filePath, { start, end });
+
     res.writeHead(206, {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunkSize,
       'Content-Type': 'video/mp4',
     });
-    file.pipe(res);
+
+    stream.pipe(res);
   } catch (err) {
     console.error("❌ Streaming error:", err);
     res.status(500).send('Internal Server Error');
@@ -129,4 +139,3 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🟢 Server running on http://0.0.0.0:${PORT}`);
 });
-
