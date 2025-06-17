@@ -24,8 +24,15 @@ console.log("PORT:", process.env.PORT);
 console.log("MONGODB_URI:", process.env.MONGODB_URI ? "***tersedia***" : "TIDAK TERSEDIA");
 
 // Serve file statis dari folder uploads (untuk video)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.mp4')) {
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+  }
+}));
 // ======================
 // ROUTES API
 // ======================
