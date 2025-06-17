@@ -23,16 +23,8 @@ console.log("Environment Variables:");
 console.log("PORT:", process.env.PORT);
 console.log("MONGODB_URI:", process.env.MONGODB_URI ? "***tersedia***" : "TIDAK TERSEDIA");
 
-// ✅ Serve file statis dari folder uploads (untuk video), dengan headers khusus untuk .mp4
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.mp4')) {
-      res.setHeader("Content-Type", "video/mp4");
-      res.setHeader("Accept-Ranges", "bytes"); // ← Penting untuk video player
-      res.setHeader("Access-Control-Allow-Origin", "*"); // opsional untuk akses dari Flutter
-    }
-  }
-}));
+// Serve file statis dari folder uploads (untuk video)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ======================
 // ROUTES API
