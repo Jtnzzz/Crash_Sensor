@@ -6,7 +6,7 @@ const hospitalRoutes = require('./routes/hospitals');
 const policeRoutes = require('./routes/police');
 const fireStationRoutes = require('./routes/firestation');
 const crashRoutes = require('./routes/Crash');
-const upload = require('./middleware/upload'); // Multer middleware
+const upload = require('./middleware/upload');
 require('dotenv').config();
 
 const app = express();
@@ -23,16 +23,6 @@ console.log("Environment Variables:");
 console.log("PORT:", process.env.PORT);
 console.log("MONGODB_URI:", process.env.MONGODB_URI ? "***tersedia***" : "TIDAK TERSEDIA");
 
-// Serve file statis dari folder uploads (untuk video)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.mp4')) {
-      res.setHeader('Content-Type', 'video/mp4');
-      res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-  }
-}));
 // ======================
 // ROUTES API
 // ======================
@@ -75,6 +65,39 @@ app.get('/api/videos', async (req, res) => {
 });
 
 // ======================
+// ENDPOINT: Stream Video (support 206 Partial Content)
+// ======================
+app.get('/uploads/:filename', async (req, res) => {
+  const filePath = path.join(__dirname, 'uploads', req.params.filename);
+  try {
+    const stat = await fs.stat(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (!range) {
+      return res.status(416).send('Range header required');
+    }
+
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const chunkSize = (end - start) + 1;
+
+    const file = (await import('fs')).createReadStream(filePath, { start, end });
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunkSize,
+      'Content-Type': 'video/mp4',
+    });
+    file.pipe(res);
+  } catch (err) {
+    console.error("❌ Streaming error:", err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// ======================
 // TEST Endpoint Root
 // ======================
 app.get("/", (req, res) => {
@@ -86,7 +109,8 @@ app.get("/", (req, res) => {
       damkar: "GET /api/v1/damkar",
       report_crash: "POST /api/crash",
       upload_video: "POST /api/upload",
-      list_video: "GET /api/videos"
+      list_video: "GET /api/videos",
+      stream_video: "GET /uploads/:filename"
     }
   });
 });
@@ -105,3 +129,4 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🟢 Server running on http://0.0.0.0:${PORT}`);
 });
+
