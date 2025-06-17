@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
-const fsSync = require('fs'); // untuk createReadStream
+const fsSync = require('fs'); // untuk streaming
 const connectDB = require('./db');
 const hospitalRoutes = require('./routes/hospitals');
 const policeRoutes = require('./routes/police');
@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware parsing JSON
 app.use(express.json());
 
-// Koneksi ke database MongoDB
+// Koneksi ke MongoDB
 connectDB();
 
 // Debugging ENV
@@ -66,43 +66,44 @@ app.get('/api/videos', async (req, res) => {
 });
 
 // ======================
-// ENDPOINT: Streaming Video (Range Support)
+// STREAMING VIDEO DENGAN RANGE
 // ======================
 app.get('/uploads/:filename', async (req, res) => {
-  const filePath = path.join(__dirname, 'uploads', req.params.filename);
   try {
+    const sanitizedFilename = req.params.filename.replace(/"/g, '');
+    const filePath = path.join(__dirname, 'uploads', sanitizedFilename);
+
     const stat = await fs.stat(filePath);
     const fileSize = stat.size;
     const range = req.headers.range;
 
     if (!range) {
-      // Fallback untuk klien yang tidak kirim Range
-      res.writeHead(200, {
-        'Content-Length': fileSize,
-        'Content-Type': 'video/mp4',
-        'Accept-Ranges': 'bytes',
-      });
-      fsSync.createReadStream(filePath).pipe(res);
+      res.status(416).send('Range header required');
       return;
     }
 
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunkSize = end - start + 1;
 
-    const stream = fsSync.createReadStream(filePath, { start, end });
+    if (start >= fileSize) {
+      res.status(416).send("Requested range not satisfiable");
+      return;
+    }
+
+    const chunksize = end - start + 1;
+    const file = fsSync.createReadStream(filePath, { start, end });
 
     res.writeHead(206, {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
-      'Content-Length': chunkSize,
+      'Content-Length': chunksize,
       'Content-Type': 'video/mp4',
     });
 
-    stream.pipe(res);
+    file.pipe(res);
   } catch (err) {
-    console.error("❌ Streaming error:", err);
+    console.error('❌ Streaming error:', err);
     res.status(500).send('Internal Server Error');
   }
 });
@@ -119,14 +120,13 @@ app.get("/", (req, res) => {
       damkar: "GET /api/v1/damkar",
       report_crash: "POST /api/crash",
       upload_video: "POST /api/upload",
-      list_video: "GET /api/videos",
-      stream_video: "GET /uploads/:filename"
+      list_video: "GET /api/videos"
     }
   });
 });
 
 // ======================
-// Error Handling
+// ERROR HANDLING
 // ======================
 app.use((err, req, res, next) => {
   console.error(err.stack);
