@@ -77,31 +77,38 @@ app.get('/uploads/:filename', async (req, res) => {
     const fileSize = stat.size;
     const range = req.headers.range;
 
-    if (!range) {
-      res.status(416).send('Range header required');
-      return;
+    if (range) {
+      // Jika ada Range, streaming sebagian (streaming cepat)
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (start >= fileSize) {
+        res.status(416).send("Requested range not satisfiable");
+        return;
+      }
+
+      const chunksize = end - start + 1;
+      const file = fsSync.createReadStream(filePath, { start, end });
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+      });
+
+      file.pipe(res);
+    } else {
+      // Jika tidak ada Range, kirim seluruh file
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes'
+      });
+
+      fsSync.createReadStream(filePath).pipe(res);
     }
-
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
-    if (start >= fileSize) {
-      res.status(416).send("Requested range not satisfiable");
-      return;
-    }
-
-    const chunksize = end - start + 1;
-    const file = fsSync.createReadStream(filePath, { start, end });
-
-    res.writeHead(206, {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunksize,
-      'Content-Type': 'video/mp4',
-    });
-
-    file.pipe(res);
   } catch (err) {
     console.error('❌ Streaming error:', err);
     res.status(500).send('Internal Server Error');
